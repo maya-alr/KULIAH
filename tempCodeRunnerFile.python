@@ -1,0 +1,96 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import wave
+import os
+
+# --------------------------
+# PARAMETER
+# --------------------------
+fs = 44100           # Sampling frequency
+duration = 0.05      # Durasi sinyal dalam detik
+t = np.arange(0, duration, 1/fs)
+
+# Sinyal pesan (message)
+Am = 1.0
+fm = 100.0           # frekuensi pesan (100 Hz)
+message = Am * np.sin(2 * np.pi * fm * t)
+
+# Carrier
+Ac = 1.0
+fc = 2000.0          # frekuensi carrier (2 kHz)
+
+# --------------------------
+# 1) AM (Amplitude Modulation)
+# --------------------------
+m_index = 0.7        # indeks modulasi
+am = (1 + m_index * message) * Ac * np.cos(2 * np.pi * fc * t)
+
+# --------------------------
+# 2) FM (Frequency Modulation)
+# --------------------------
+kf = 200.0  # sensitivity (Hz per unit message)
+integral_message = np.cumsum(message) / fs
+fm_signal = Ac * np.cos(2 * np.pi * fc * t + 2 * np.pi * kf * integral_message)
+
+# --------------------------
+# 3) PM (Phase Modulation)
+# --------------------------
+kp = np.pi/2  # phase sensitivity
+pm_signal = Ac * np.cos(2 * np.pi * fc * t + kp * message)
+
+# --------------------------
+# 4) FSK (Binary FSK)
+# --------------------------
+bit_rate = 50
+bit_duration = 1/bit_rate
+num_bits = int(np.ceil(duration / bit_duration))
+np.random.seed(0)
+bits = np.random.randint(0, 2, size=num_bits)
+bit_signal = np.repeat(bits, int(bit_duration * fs))[:t.size]
+f1 = 1500.0
+f2 = 3000.0
+fsk_signal = Ac * np.cos(2 * np.pi * (f1 * (1 - bit_signal) + f2 * bit_signal) * t)
+
+# --------------------------
+# FUNGSI BANTUAN
+# --------------------------
+def plot_signal(sig, title, show_ms=5):
+    """Menampilkan plot time-domain untuk beberapa milidetik pertama."""
+    end_idx = int(fs * show_ms / 1000)
+    plt.figure(figsize=(8, 3))
+    plt.plot(t[:end_idx], sig[:end_idx])
+    plt.title(title)
+    plt.xlabel('Waktu (s)')
+    plt.ylabel('Amplitudo')
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
+
+def save_wav(sig, filename):
+    """Menyimpan sinyal menjadi file .wav (16-bit PCM)"""
+    max_val = np.max(np.abs(sig))
+    if max_val > 0:
+        sig = sig / max_val
+    sig_int16 = np.int16(sig * 32767)
+    with wave.open(filename, 'w') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(fs)
+        wf.writeframes(sig_int16.tobytes())
+    print(f"File tersimpan: {filename}")
+
+# --------------------------
+# PLOT & SIMPAN HASIL
+# --------------------------
+os.makedirs("output_signal", exist_ok=True)
+
+plot_signal(message, "Sinyal Pesan (Message)")
+plot_signal(am, "AM (Amplitude Modulation)")
+plot_signal(fm_signal, "FM (Frequency Modulation)")
+plot_signal(pm_signal, "PM (Phase Modulation)")
+plot_signal(fsk_signal, "FSK (Frequency Shift Keying)")
+
+save_wav(am, "output_signal/am_signal.wav")
+save_wav(fm_signal, "output_signal/fm_signal.wav")
+save_wav(pm_signal, "output_signal/pm_signal.wav")
+save_wav(fsk_signal, "output_signal/fsk_signal.wav")

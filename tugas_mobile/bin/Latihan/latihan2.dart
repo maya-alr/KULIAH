@@ -1,7 +1,8 @@
 void main() {
+
   // Panjang dan lebar dimasukkan langsung melalui variabel
-  double panjang = 10;
-  double lebar = 5;
+  double panjang = 6;
+  double lebar = 6;
 
   // Hitung luas dan keliling
   double luas = panjang * lebar;
